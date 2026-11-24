@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>초등학교 동아리 신청 시스템</title>
+  <!-- Supabase 공식 JavaScript 라이브러리 (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --success: #16a34a;
+      --warning: #d97706;
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 20px 14px 60px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* 헤더 */
+    header {
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: #ffffff;
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.18);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    header p {
+      font-size: 0.95rem;
+      opacity: 0.92;
+    }
+
+    .btn-refresh {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-refresh:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* 설정 경고 배너 */
+    .config-warning {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 16px 20px;
+      border-radius: var(--radius);
+      margin-bottom: 18px;
+      font-size: 0.92rem;
+    }
+
+    /* 탭 메뉴 */
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: var(--card);
+      padding: 6px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 12px 10px;
+      border-radius: 10px;
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* 공통 카드 */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 1.12rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .section-desc {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* 입력 폼 */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #374151;
+    }
+
+    .form-group input,
+    .form-group select {
+      height: 44px;
+      padding: 0 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      background: #ffffff;
+      color: var(--text);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    /* 동아리 카드 그리드 */
+    .club-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 16px;
+    }
+
+    .club-card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .club-card:hover {
+      border-color: #93c5fd;
+      transform: translateY(-2px);
+    }
+
+    .club-card.full {
+      background: #f9fafb;
+      opacity: 0.86;
+    }
+
+    .club-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .club-name {
+      font-size: 1.18rem;
+      font-weight: 800;
+    }
+
+    .badge {
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .badge-open {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .badge-almost {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    .badge-full {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .club-location {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .capacity-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .progress-fill.almost {
+      background: var(--warning);
+    }
+
+    .progress-fill.full {
+      background: var(--danger);
+    }
+
+    /* 버튼 */
+    .btn {
+      width: 100%;
+      height: 44px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #ffffff;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: var(--danger-hover);
+    }
+
+    .btn-outline {
+      background: #ffffff;
+      color: var(--text);
+      border: 1px solid #d1d5db;
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      background: #f9fafb;
+    }
+
+    .btn:disabled {
+      background: #d1d5db;
+      color: #6b7280;
+      cursor: not-allowed;
+    }
+
+    /* 알림 메시지 */
+    .alert {
+      display: none;
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .alert.show {
+      display: block;
+    }
+
+    .alert-success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .alert-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .alert-info {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+
+    /* 내 신청 결과 박스 */
+    .my-result-box {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 12px;
+      background: var(--primary-light);
+      border: 1px solid #bfdbfe;
+    }
+
+    .my-result-box h3 {
+      font-size: 1.15rem;
+      margin-bottom: 8px;
+      color: #1e3a8a;
+    }
+
+    .my-result-meta {
+      font-size: 0.92rem;
+      color: #374151;
+      margin-bottom: 14px;
+      line-height: 1.7;
+    }
+
+    /* 전체 현황 테이블 */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar select {
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 0.9rem;
+    }
+
+    .btn-sm {
+      width: auto;
+      height: 40px;
+      padding: 0 16px;
+      font-size: 0.88rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      min-width: 560px;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f9fafb;
+      font-weight: 700;
+      color: #374151;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 36px 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .summary-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .chip {
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.84rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 680px) {
+      .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      header h1 {
+        font-size: 1.32rem;
+      }
+
+      .tab-btn {
+        font-size: 0.85rem;
+        padding: 10px 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 상단 헤더 -->
+    <header>
+      <div>
+        <h1>초등학교 동아리 신청</h1>
+        <p>1인 1동아리 선착순 신청 · 변경은 기존 신청 취소 후 재신청</p>
+      </div>
+      <button type="button" class="btn-refresh" id="btnRefresh">인원 새로고침</button>
+    </header>
+
+    <!-- Supabase 키 미설정 안내 -->
+    <div id="configWarning" class="config-warning">
+      <strong>Supabase 연결 설정이 필요합니다.</strong><br />
+      <code>index.html</code> 파일 상단의 <code>SUPABASE_URL</code>과 <code>SUPABASE_ANON_KEY</code>에
+      본인의 Supabase 프로젝트 정보를 입력해 주세요.
+    </div>
+
+    <!-- 전역 알림 영역 -->
+    <div id="globalAlert" class="alert" role="alert"></div>
+
+    <!-- 탭 메뉴 -->
+    <nav class="tabs" aria-label="메뉴 탭">
+      <button type="button" class="tab-btn active" data-tab="apply">동아리 신청</button>
+      <button type="button" class="tab-btn" data-tab="my">내 신청 확인 · 취소</button>
+      <button type="button" class="tab-btn" data-tab="status">전체 신청 현황</button>
+    </nav>
+
+    <!-- 탭 1: 동아리 신청 -->
+    <section id="tab-apply" class="tab-panel active">
+      <div class="card">
+        <h2 class="section-title">1. 학생 정보 입력</h2>
+        <p class="section-desc">본인의 학년, 반, 번호, 이름을 정확히 입력한 뒤 아래에서 원하는 동아리를 선택하세요.</p>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="grade">학년</label>
+            <select id="grade">
+              <option value="">선택</option>
+              <option value="1">1학년</option>
+              <option value="2">2학년</option>
+              <option value="3">3학년</option>
+              <option value="4">4학년</option>
+              <option value="5">5학년</option>
+              <option value="6">6학년</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="classNum">반</label>
+            <input type="number" id="classNum" min="1" max="30" placeholder="예: 3" />
+          </div>
+
+          <div class="form-group">
+            <label for="studentNum">번호</label>
+            <input type="number" id="studentNum" min="1" max="50" placeholder="예: 12" />
+          </div>
+
+          <div class="form-group">
+            <label for="studentName">이름</label>
+            <input type="text" id="studentName" maxlength="20" placeholder="예: 홍길동" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">2. 동아리 선택</h2>
+        <p class="section-desc">최대 정원이 가득 찬 동아리는 신청할 수 없습니다. 이미 신청한 경우 [내 신청 확인 · 취소] 탭에서 취소 후 다시 신청하세요.</p>
+        <div id="clubList" class="club-grid">
+          <div class="empty-state">동아리 목록을 불러오는 중입니다...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 탭 2: 내 신청 확인 및 취소 -->
+    <section id="tab-my" class="tab-panel">
+      <div class="card">
+        <h2 class="section-title">내 신청 내역 확인 및 취소</h2>
+        <p class="section-desc">신청할 때 입력한 학년, 반, 번호로 조회합니다. 동아리를 바꾸려면 먼저 기존 신청을 취소해 주세요.</p>
+
+        <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="form-group">
+            <label for="myGrade">학년</label>
+            <select id="myGrade">
+              <option value="">선택</option>
+              <option value="1">1학년</option>
+              <option value="2">2학년</option>
+              <option value="3">3학년</option>
+              <option value="4">4학년</option>
+              <option value="5">5학년</option>
+              <option value="6">6학년</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="myClassNum">반</label>
+            <input type="number" id="myClassNum" min="1" max="30" placeholder="예: 3" />
+          </div>
+
+          <div class="form-group">
+            <label for="myStudentNum">번호</label>
+            <input type="number" id="myStudentNum" min="1" max="50" placeholder="예: 12" />
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <button type="button" class="btn btn-primary" id="btnCheckMyApp">신청 내역 조회하기</button>
+        </div>
+
+        <div id="myResultArea"></div>
+      </div>
+    </section>
+
+    <!-- 탭 3: 전체 신청 현황 (선생님 확인 및 CSV 다운로드) -->
+    <section id="tab-status" class="tab-panel">
+      <div class="card">
+        <h2 class="section-title">전체 신청 현황</h2>
+        <p class="section-desc">동아리별 신청 인원과 학생 명단을 확인하고 엑셀(CSV) 파일로 내려받을 수 있습니다.</p>
+
+        <div id="summaryChips" class="summary-chips"></div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select id="filterClub">
+              <option value="all">전체 동아리 보기</option>
+            </select>
+            <span id="totalCountLabel" style="font-size: 0.9rem; font-weight: 700; color: #374151;"></span>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnDownloadCsv">CSV(엑셀) 다운로드</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>동아리</th>
+                <th>학년</th>
+                <th>반</th>
+                <th>번호</th>
+                <th>이름</th>
+                <th>신청 시각</th>
+              </tr>
+            </thead>
+            <tbody id="statusTableBody">
+              <tr>
+                <td colspan="6" class="empty-state">불러오는 중입니다...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // =====================================================================
+    // ★ 여기 두 줄만 본인의 Supabase 프로젝트 값으로 수정하세요 ★
+    // Supabase 대시보드 -> Project Settings -> API (또는 Data API / API Keys)
+    // =====================================================================
+    const SUPABASE_URL = "https://fmyzldgcpyzemtysksoe.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_5eMYsGsMGUI_-RMuZs04Yg_bUvstK-N";
+
+    // 전역 상태 저장
+    let supabaseClient = null;
+    let clubsData = [];
+    let applicationsData = [];
+
+    // XSS 방지용 HTML 이스케이프 함수
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    // 날짜/시각 한국어 포맷 변환
+    function formatDateTime(isoString) {
+      if (!isoString) return "-";
+      const date = new Date(isoString);
+      return date.toLocaleString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
+
+    // 상단 알림 메시지 표시
+    function showAlert(message, type = "info") {
+      const box = document.getElementById("globalAlert");
+      box.textContent = message;
+      box.className = `alert show alert-${type}`;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function hideAlert() {
+      const box = document.getElementById("globalAlert");
+      box.className = "alert";
+      box.textContent = "";
+    }
+
+    // 탭 전환 설정
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        hideAlert();
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+      });
+    });
+
+    // Supabase 초기화 검사
+    function initSupabase() {
+      const isPlaceholder =
+        !SUPABASE_URL ||
+        !SUPABASE_ANON_KEY ||
+        SUPABASE_URL.includes("여기에_") ||
+        SUPABASE_ANON_KEY.includes("여기에_");
+
+      if (isPlaceholder) {
+        document.getElementById("configWarning").style.display = "block";
+        document.getElementById("clubList").innerHTML =
+          '<div class="empty-state">Supabase 연결 설정 후 동아리 목록이 표시됩니다.</div>';
+        document.getElementById("statusTableBody").innerHTML =
+          '<tr><td colspan="6" class="empty-state">Supabase 연결 설정이 필요합니다.</td></tr>';
+        return false;
+      }
+
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return true;
+    }
+
+    // clubs 및 applications 데이터 불러오기
+    async function loadAllData() {
+      if (!supabaseClient) return;
+
+      const [clubsRes, appsRes] = await Promise.all([
+        supabaseClient.from("clubs").select("id, name, location, max_capacity").order("id", { ascending: true }),
+        supabaseClient
+          .from("applications")
+          .select("id, club_id, grade, class_num, student_num, student_name, applied_at")
+          .order("applied_at", { ascending: true })
+      ]);
+
+      if (clubsRes.error) {
+        showAlert("동아리 목록을 불러오지 못했습니다: " + clubsRes.error.message, "error");
+        return;
+      }
+      if (appsRes.error) {
+        showAlert("신청 현황을 불러오지 못했습니다: " + appsRes.error.message, "error");
+        return;
+      }
+
+      clubsData = clubsRes.data || [];
+      applicationsData = appsRes.data || [];
+
+      renderClubCards();
+      renderStatusTab();
+    }
+
+    // 동아리별 현재 신청 인원 계산
+    function getClubCount(clubId) {
+      return applicationsData.filter((app) => app.club_id === clubId).length;
+    }
+
+    // 동아리 ID로 이름 조회
+    function getClubById(clubId) {
+      return clubsData.find((c) => c.id === clubId);
+    }
+
+    // 탭 1: 동아리 카드 렌더링
+    function renderClubCards() {
+      const container = document.getElementById("clubList");
+      if (clubsData.length === 0) {
+        container.innerHTML = '<div class="empty-state">등록된 동아리가 없습니다.</div>';
+        return;
+      }
+
+      container.innerHTML = clubsData
+        .map((club) => {
+          const current = getClubCount(club.id);
+          const max = club.max_capacity;
+          const remain = Math.max(0, max - current);
+          const percent = Math.min(100, Math.round((current / max) * 100));
+          const isFull = current >= max;
+          const isAlmost = !isFull && remain <= 3;
+
+          const badgeClass = isFull ? "badge-full" : isAlmost ? "badge-almost" : "badge-open";
+          const badgeText = isFull ? "정원 마감" : isAlmost ? `마감 임박 (${remain}명 남음)` : `${remain}명 남음`;
+          const fillClass = isFull ? "full" : isAlmost ? "almost" : "";
+
+          return `
+            <div class="club-card ${isFull ? "full" : ""}">
+              <div>
+                <div class="club-header">
+                  <div class="club-name">${escapeHtml(club.name)}</div>
+                  <span class="badge ${badgeClass}">${badgeText}</span>
+                </div>
+                <div class="club-location">활동 장소: ${escapeHtml(club.location)}</div>
+                <div class="capacity-row">
+                  <span>신청 현황</span>
+                  <span>${current} / ${max}명</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill ${fillClass}" style="width: ${percent}%"></div>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-primary"
+                ${isFull ? "disabled" : ""}
+                onclick="applyClub(${club.id})"
+              >
+                ${isFull ? "마감되었습니다" : "이 동아리 신청하기"}
+              </button>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    // 동아리 신청 처리 (INSERT)
+    async function applyClub(clubId) {
+      hideAlert();
+      if (!supabaseClient) return;
+
+      const grade = parseInt(document.getElementById("grade").value, 10);
+      const classNum = parseInt(document.getElementById("classNum").value, 10);
+      const studentNum = parseInt(document.getElementById("studentNum").value, 10);
+      const studentName = document.getElementById("studentName").value.trim();
+
+      // 입력값 검증
+      if (!grade || grade < 1 || grade > 6) {
+        showAlert("학년(1~6학년)을 선택해 주세요.", "error");
+        return;
+      }
+      if (!classNum || classNum < 1) {
+        showAlert("반을 올바르게 입력해 주세요.", "error");
+        return;
+      }
+      if (!studentNum || studentNum < 1) {
+        showAlert("번호를 올바르게 입력해 주세요.", "error");
+        return;
+      }
+      if (!studentName) {
+        showAlert("학생 이름을 입력해 주세요.", "error");
+        return;
+      }
+
+      const club = getClubById(clubId);
+      const clubName = club ? club.name : "선택한 동아리";
+
+      const ok = confirm(
+        `${grade}학년 ${classNum}반 ${studentNum}번 ${studentName} 학생으로\n[${clubName}]에 신청하시겠습니까?`
+      );
+      if (!ok) return;
+
+      const { error } = await supabaseClient.from("applications").insert({
+        club_id: clubId,
+        grade: grade,
+        class_num: classNum,
+        student_num: studentNum,
+        student_name: studentName
+      });
+
+      if (error) {
+        // 중복 신청(UNIQUE 제약조건 위반: 23505)
+        if (error.code === "23505") {
+          showAlert(
+            "이미 신청한 동아리가 있습니다. 변경하려면 [내 신청 확인 · 취소] 탭에서 기존 신청을 취소한 뒤 다시 신청해 주세요.",
+            "error"
+          );
+        } else if (error.message && error.message.includes("최대 정원")) {
+          // 트리거 정원 초과 차단 메시지
+          showAlert(error.message, "error");
+        } else {
+          showAlert("신청 중 오류가 발생했습니다: " + error.message, "error");
+        }
+        await loadAllData();
+        return;
+      }
+
+      showAlert(
+        `${grade}학년 ${classNum}반 ${studentNum}번 ${studentName} 학생의 [${clubName}] 신청이 완료되었습니다!`,
+        "success"
+      );
+
+      // 방금 입력한 정보를 '내 신청 확인' 탭에도 자동 채워 편리하게 조회 가능하도록 처리
+      document.getElementById("myGrade").value = String(grade);
+      document.getElementById("myClassNum").value = String(classNum);
+      document.getElementById("myStudentNum").value = String(studentNum);
+
+      await loadAllData();
+    }
+
+    // 탭 2: 내 신청 조회
+    async function checkMyApplication() {
+      hideAlert();
+      if (!supabaseClient) return;
+
+      const grade = parseInt(document.getElementById("myGrade").value, 10);
+      const classNum = parseInt(document.getElementById("myClassNum").value, 10);
+      const studentNum = parseInt(document.getElementById("myStudentNum").value, 10);
+
+      if (!grade || !classNum || !studentNum) {
+        showAlert("조회할 학년, 반, 번호를 모두 입력해 주세요.", "error");
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from("applications")
+        .select("id, club_id, grade, class_num, student_num, student_name, applied_at, clubs(name, location)")
+        .eq("grade", grade)
+        .eq("class_num", classNum)
+        .eq("student_num", studentNum)
+        .maybeSingle();
+
+      const resultArea = document.getElementById("myResultArea");
+
+      if (error) {
+        showAlert("조회 중 오류가 발생했습니다: " + error.message, "error");
+        return;
+      }
+
+      if (!data) {
+        resultArea.innerHTML = `
+          <div class="my-result-box" style="background:#f9fafb; border-color:#e5e7eb;">
+            <p style="color:#4b5563; font-weight:600;">
+              ${grade}학년 ${classNum}반 ${studentNum}번으로 신청된 동아리가 없습니다.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      const clubName = data.clubs ? data.clubs.name : "-";
+      const clubLocation = data.clubs ? data.clubs.location : "-";
+
+      resultArea.innerHTML = `
+        <div class="my-result-box">
+          <h3>신청 완료: ${escapeHtml(clubName)}</h3>
+          <div class="my-result-meta">
+            <strong>학생 정보:</strong> ${data.grade}학년 ${data.class_num}반 ${data.student_num}번 ${escapeHtml(data.student_name)}<br />
+            <strong>활동 장소:</strong> ${escapeHtml(clubLocation)}<br />
+            <strong>신청 시각:</strong> ${formatDateTime(data.applied_at)}
+          </div>
+          <button type="button" class="btn btn-danger" onclick="cancelApplication(${data.id}, '${escapeHtml(clubName)}')">
+            이 신청 취소하기 (다른 동아리로 변경)
+          </button>
+        </div>
+      `;
+    }
+
+    // 신청 취소 처리 (DELETE)
+    async function cancelApplication(applicationId, clubName) {
+      hideAlert();
+      if (!supabaseClient) return;
+
+      const ok = confirm(
+        `[${clubName}] 신청을 정말 취소하시겠습니까?\n취소 후에는 다시 선착순으로 신청해야 합니다.`
+      );
+      if (!ok) return;
+
+      const { error } = await supabaseClient
+        .from("applications")
+        .delete()
+        .eq("id", applicationId);
+
+      if (error) {
+        showAlert("취소 처리 중 오류가 발생했습니다: " + error.message, "error");
+        return;
+      }
+
+      document.getElementById("myResultArea").innerHTML = "";
+      showAlert(`[${clubName}] 신청이 취소되었습니다. 이제 [동아리 신청] 탭에서 새 동아리를 신청할 수 있습니다.`, "success");
+      await loadAllData();
+    }
+
+    // 탭 3: 전체 현황 렌더링
+    function renderStatusTab() {
+      const filterSelect = document.getElementById("filterClub");
+      const prevSelected = filterSelect.value || "all";
+
+      // 드롭다운 옵션 갱신
+      filterSelect.innerHTML =
+        '<option value="all">전체 동아리 보기</option>' +
+        clubsData
+          .map((c) => `<option value="${c.id}">${escapeHtml(c.name)} (${getClubCount(c.id)}/${c.max_capacity}명)</option>`)
+          .join("");
+      filterSelect.value = prevSelected;
+
+      // 요약 칩 렌더링
+      const chipsEl = document.getElementById("summaryChips");
+      chipsEl.innerHTML = clubsData
+        .map((c) => `<span class="chip">${escapeHtml(c.name)}: ${getClubCount(c.id)} / ${c.max_capacity}명</span>`)
+        .join("");
+
+      renderStatusTable();
+    }
+
+    function renderStatusTable() {
+      const selectedClub = document.getElementById("filterClub").value;
+      const tbody = document.getElementById("statusTableBody");
+
+      const filtered =
+        selectedClub === "all"
+          ? applicationsData
+          : applicationsData.filter((app) => String(app.club_id) === String(selectedClub));
+
+      document.getElementById("totalCountLabel").textContent = `총 ${filtered.length}명`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">아직 신청한 학생이 없습니다.</td></tr>';
+        return;
+      }
+
+      // 학년 -> 반 -> 번호 순 정렬
+      const sorted = [...filtered].sort((a, b) => {
+        if (a.club_id !== b.club_id) return a.club_id - b.club_id;
+        if (a.grade !== b.grade) return a.grade - b.grade;
+        if (a.class_num !== b.class_num) return a.class_num - b.class_num;
+        return a.student_num - b.student_num;
+      });
+
+      tbody.innerHTML = sorted
+        .map((app) => {
+          const club = getClubById(app.club_id);
+          return `
+            <tr>
+              <td><strong>${escapeHtml(club ? club.name : "-")}</strong></td>
+              <td>${app.grade}학년</td>
+              <td>${app.class_num}반</td>
+              <td>${app.student_num}번</td>
+              <td>${escapeHtml(app.student_name)}</td>
+              <td>${formatDateTime(app.applied_at)}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+
+    // CSV(엑셀) 파일 다운로드
+    function downloadCsv() {
+      const selectedClub = document.getElementById("filterClub").value;
+      const filtered =
+        selectedClub === "all"
+          ? applicationsData
+          : applicationsData.filter((app) => String(app.club_id) === String(selectedClub));
+
+      if (filtered.length === 0) {
+        showAlert("다운로드할 신청 데이터가 없습니다.", "info");
+        return;
+      }
+
+      const header = ["동아리", "활동장소", "학년", "반", "번호", "이름", "신청시각"];
+      const rows = filtered.map((app) => {
+        const club = getClubById(app.club_id);
+        return [
+          club ? club.name : "",
+          club ? club.location : "",
+          app.grade,
+          app.class_num,
+          app.student_num,
+          app.student_name,
+          formatDateTime(app.applied_at)
+        ].map((val) => `"${String(val).replace(/"/g, '""')}"`);
+      });
+
+      // 엑셀 한글 깨짐 방지를 위해 UTF-8 BOM(\uFEFF) 추가
+      const csvContent = "\uFEFF" + [header.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `동아리_신청현황_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // 이벤트 연결
+    document.getElementById("btnRefresh").addEventListener("click", async () => {
+      hideAlert();
+      await loadAllData();
+      showAlert("최신 신청 인원으로 새로고침했습니다.", "info");
+    });
+
+    document.getElementById("btnCheckMyApp").addEventListener("click", checkMyApplication);
+    document.getElementById("filterClub").addEventListener("change", renderStatusTable);
+    document.getElementById("btnDownloadCsv").addEventListener("click", downloadCsv);
+
+    // 페이지 시작 시 초기화
+    if (initSupabase()) {
+      loadAllData();
+    }
+  </script>
+</body>
+</html>
