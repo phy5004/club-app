@@ -42,7 +42,6 @@
       margin: 0 auto;
     }
 
-    /* 헤더 */
     header {
       background: linear-gradient(135deg, #2563eb, #3b82f6);
       color: #ffffff;
@@ -84,7 +83,6 @@
       background: rgba(255, 255, 255, 0.3);
     }
 
-    /* 설정 경고 배너 */
     .config-warning {
       display: none;
       background: #fef2f2;
@@ -96,7 +94,6 @@
       font-size: 0.92rem;
     }
 
-    /* 탭 메뉴 */
     .tabs {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -133,7 +130,6 @@
       display: block;
     }
 
-    /* 공통 카드 */
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -154,7 +150,6 @@
       margin-bottom: 16px;
     }
 
-    /* 입력 폼 */
     .form-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -191,7 +186,6 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
     }
 
-    /* 동아리 카드 그리드 */
     .club-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
@@ -293,7 +287,6 @@
       background: var(--danger);
     }
 
-    /* 버튼 */
     .btn {
       width: 100%;
       height: 44px;
@@ -339,7 +332,6 @@
       cursor: not-allowed;
     }
 
-    /* 알림 메시지 */
     .alert {
       display: none;
       padding: 14px 16px;
@@ -371,7 +363,6 @@
       border: 1px solid #bfdbfe;
     }
 
-    /* 내 신청 결과 박스 */
     .my-result-box {
       margin-top: 18px;
       padding: 18px;
@@ -393,7 +384,6 @@
       line-height: 1.7;
     }
 
-    /* 전체 현황 테이블 */
     .toolbar {
       display: flex;
       justify-content: space-between;
@@ -495,7 +485,6 @@
 </head>
 <body>
   <div class="container">
-    <!-- 상단 헤더 -->
     <header>
       <div>
         <h1>초등학교 동아리 신청</h1>
@@ -504,17 +493,14 @@
       <button type="button" class="btn-refresh" id="btnRefresh">인원 새로고침</button>
     </header>
 
-    <!-- Supabase 키 미설정 안내 -->
     <div id="configWarning" class="config-warning">
       <strong>Supabase 연결 설정이 필요합니다.</strong><br />
-      <code>index.html</code> 파일 상단의 <code>SUPABASE_URL</code>과 <code>SUPABASE_ANON_KEY</code>에
+      <code>index.html</code> 파일 아래쪽의 <code>SUPABASE_URL</code>과 <code>SUPABASE_ANON_KEY</code>에
       본인의 Supabase 프로젝트 정보를 입력해 주세요.
     </div>
 
-    <!-- 전역 알림 영역 -->
     <div id="globalAlert" class="alert" role="alert"></div>
 
-    <!-- 탭 메뉴 -->
     <nav class="tabs" aria-label="메뉴 탭">
       <button type="button" class="tab-btn active" data-tab="apply">동아리 신청</button>
       <button type="button" class="tab-btn" data-tab="my">내 신청 확인 · 취소</button>
@@ -606,7 +592,7 @@
       </div>
     </section>
 
-    <!-- 탭 3: 전체 신청 현황 (선생님 확인 및 CSV 다운로드) -->
+    <!-- 탭 3: 전체 신청 현황 -->
     <section id="tab-status" class="tab-panel">
       <div class="card">
         <h2 class="section-title">전체 신청 현황</h2>
@@ -649,18 +635,16 @@
 
   <script>
     // =====================================================================
-    // ★ 여기 두 줄만 본인의 Supabase 프로젝트 값으로 수정하세요 ★
-    // Supabase 대시보드 -> Project Settings -> API (또는 Data API / API Keys)
+    // ★ 여기 두 줄을 기존에 입력하셨던 본인의 Supabase 값으로 채워 넣어 주세요 ★
     // =====================================================================
-    const SUPABASE_URL = "https://fmyzldgcpyzemtysksoe.supabase.co";
+    const SUPABASE_URL = "https://https://fmyzldgcpyzemtysksoe.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_5eMYsGsMGUI_-RMuZs04Yg_bUvstK-N";
 
-    // 전역 상태 저장
     let supabaseClient = null;
     let clubsData = [];
     let applicationsData = [];
+    let isSubmitting = false;
 
-    // XSS 방지용 HTML 이스케이프 함수
     function escapeHtml(str) {
       return String(str ?? "")
         .replace(/&/g, "&amp;")
@@ -670,10 +654,23 @@
         .replace(/'/g, "&#39;");
     }
 
-    // 날짜/시각 한국어 포맷 변환
+    // applied_at 또는 created_at 중 존재하는 시각 컬럼 자동 사용
+    function getAppliedTime(app) {
+      return app ? (app.applied_at || app.created_at || null) : null;
+    }
+
+    function getClubCapacity(club) {
+      return Number(club?.max_capacity ?? club?.capacity ?? 20);
+    }
+
+    function getClubLocation(club) {
+      return club?.location || club?.room || "-";
+    }
+
     function formatDateTime(isoString) {
       if (!isoString) return "-";
       const date = new Date(isoString);
+      if (Number.isNaN(date.getTime())) return "-";
       return date.toLocaleString("ko-KR", {
         year: "numeric",
         month: "2-digit",
@@ -684,7 +681,6 @@
       });
     }
 
-    // 상단 알림 메시지 표시
     function showAlert(message, type = "info") {
       const box = document.getElementById("globalAlert");
       box.textContent = message;
@@ -698,7 +694,6 @@
       box.textContent = "";
     }
 
-    // 탭 전환 설정
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         hideAlert();
@@ -709,7 +704,6 @@
       });
     });
 
-    // Supabase 초기화 검사
     function initSupabase() {
       const isPlaceholder =
         !SUPABASE_URL ||
@@ -730,16 +724,13 @@
       return true;
     }
 
-    // clubs 및 applications 데이터 불러오기
+    // 컬럼명 차이에 영향받지 않도록 select("*") + id 정렬 사용
     async function loadAllData() {
       if (!supabaseClient) return;
 
       const [clubsRes, appsRes] = await Promise.all([
-        supabaseClient.from("clubs").select("id, name, location, max_capacity").order("id", { ascending: true }),
-        supabaseClient
-          .from("applications")
-          .select("id, club_id, grade, class_num, student_num, student_name, applied_at")
-          .order("applied_at", { ascending: true })
+        supabaseClient.from("clubs").select("*").order("id", { ascending: true }),
+        supabaseClient.from("applications").select("*").order("id", { ascending: true })
       ]);
 
       if (clubsRes.error) {
@@ -758,17 +749,14 @@
       renderStatusTab();
     }
 
-    // 동아리별 현재 신청 인원 계산
     function getClubCount(clubId) {
-      return applicationsData.filter((app) => app.club_id === clubId).length;
+      return applicationsData.filter((app) => String(app.club_id) === String(clubId)).length;
     }
 
-    // 동아리 ID로 이름 조회
     function getClubById(clubId) {
-      return clubsData.find((c) => c.id === clubId);
+      return clubsData.find((c) => String(c.id) === String(clubId));
     }
 
-    // 탭 1: 동아리 카드 렌더링
     function renderClubCards() {
       const container = document.getElementById("clubList");
       if (clubsData.length === 0) {
@@ -779,9 +767,9 @@
       container.innerHTML = clubsData
         .map((club) => {
           const current = getClubCount(club.id);
-          const max = club.max_capacity;
+          const max = getClubCapacity(club);
           const remain = Math.max(0, max - current);
-          const percent = Math.min(100, Math.round((current / max) * 100));
+          const percent = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 100;
           const isFull = current >= max;
           const isAlmost = !isFull && remain <= 3;
 
@@ -796,7 +784,7 @@
                   <div class="club-name">${escapeHtml(club.name)}</div>
                   <span class="badge ${badgeClass}">${badgeText}</span>
                 </div>
-                <div class="club-location">활동 장소: ${escapeHtml(club.location)}</div>
+                <div class="club-location">활동 장소: ${escapeHtml(getClubLocation(club))}</div>
                 <div class="capacity-row">
                   <span>신청 현황</span>
                   <span>${current} / ${max}명</span>
@@ -819,17 +807,15 @@
         .join("");
     }
 
-    // 동아리 신청 처리 (INSERT)
     async function applyClub(clubId) {
       hideAlert();
-      if (!supabaseClient) return;
+      if (!supabaseClient || isSubmitting) return;
 
       const grade = parseInt(document.getElementById("grade").value, 10);
       const classNum = parseInt(document.getElementById("classNum").value, 10);
       const studentNum = parseInt(document.getElementById("studentNum").value, 10);
       const studentName = document.getElementById("studentName").value.trim();
 
-      // 입력값 검증
       if (!grade || grade < 1 || grade > 6) {
         showAlert("학년(1~6학년)을 선택해 주세요.", "error");
         return;
@@ -855,45 +841,46 @@
       );
       if (!ok) return;
 
-      const { error } = await supabaseClient.from("applications").insert({
-        club_id: clubId,
-        grade: grade,
-        class_num: classNum,
-        student_num: studentNum,
-        student_name: studentName
-      });
+      isSubmitting = true;
+      try {
+        const { error } = await supabaseClient.from("applications").insert({
+          club_id: clubId,
+          grade: grade,
+          class_num: classNum,
+          student_num: studentNum,
+          student_name: studentName
+        });
 
-      if (error) {
-        // 중복 신청(UNIQUE 제약조건 위반: 23505)
-        if (error.code === "23505") {
-          showAlert(
-            "이미 신청한 동아리가 있습니다. 변경하려면 [내 신청 확인 · 취소] 탭에서 기존 신청을 취소한 뒤 다시 신청해 주세요.",
-            "error"
-          );
-        } else if (error.message && error.message.includes("최대 정원")) {
-          // 트리거 정원 초과 차단 메시지
-          showAlert(error.message, "error");
-        } else {
-          showAlert("신청 중 오류가 발생했습니다: " + error.message, "error");
+        if (error) {
+          if (error.code === "23505") {
+            showAlert(
+              "이미 신청한 동아리가 있습니다. 변경하려면 [내 신청 확인 · 취소] 탭에서 기존 신청을 취소한 뒤 다시 신청해 주세요.",
+              "error"
+            );
+          } else if (error.message && error.message.includes("최대 정원")) {
+            showAlert(error.message, "error");
+          } else {
+            showAlert("신청 중 오류가 발생했습니다: " + error.message, "error");
+          }
+          await loadAllData();
+          return;
         }
+
+        showAlert(
+          `${grade}학년 ${classNum}반 ${studentNum}번 ${studentName} 학생의 [${clubName}] 신청이 완료되었습니다!`,
+          "success"
+        );
+
+        document.getElementById("myGrade").value = String(grade);
+        document.getElementById("myClassNum").value = String(classNum);
+        document.getElementById("myStudentNum").value = String(studentNum);
+
         await loadAllData();
-        return;
+      } finally {
+        isSubmitting = false;
       }
-
-      showAlert(
-        `${grade}학년 ${classNum}반 ${studentNum}번 ${studentName} 학생의 [${clubName}] 신청이 완료되었습니다!`,
-        "success"
-      );
-
-      // 방금 입력한 정보를 '내 신청 확인' 탭에도 자동 채워 편리하게 조회 가능하도록 처리
-      document.getElementById("myGrade").value = String(grade);
-      document.getElementById("myClassNum").value = String(classNum);
-      document.getElementById("myStudentNum").value = String(studentNum);
-
-      await loadAllData();
     }
 
-    // 탭 2: 내 신청 조회
     async function checkMyApplication() {
       hideAlert();
       if (!supabaseClient) return;
@@ -909,7 +896,7 @@
 
       const { data, error } = await supabaseClient
         .from("applications")
-        .select("id, club_id, grade, class_num, student_num, student_name, applied_at, clubs(name, location)")
+        .select("*")
         .eq("grade", grade)
         .eq("class_num", classNum)
         .eq("student_num", studentNum)
@@ -933,8 +920,9 @@
         return;
       }
 
-      const clubName = data.clubs ? data.clubs.name : "-";
-      const clubLocation = data.clubs ? data.clubs.location : "-";
+      const club = getClubById(data.club_id);
+      const clubName = club ? club.name : "-";
+      const clubLocation = getClubLocation(club);
 
       resultArea.innerHTML = `
         <div class="my-result-box">
@@ -942,7 +930,7 @@
           <div class="my-result-meta">
             <strong>학생 정보:</strong> ${data.grade}학년 ${data.class_num}반 ${data.student_num}번 ${escapeHtml(data.student_name)}<br />
             <strong>활동 장소:</strong> ${escapeHtml(clubLocation)}<br />
-            <strong>신청 시각:</strong> ${formatDateTime(data.applied_at)}
+            <strong>신청 시각:</strong> ${formatDateTime(getAppliedTime(data))}
           </div>
           <button type="button" class="btn btn-danger" onclick="cancelApplication(${data.id}, '${escapeHtml(clubName)}')">
             이 신청 취소하기 (다른 동아리로 변경)
@@ -951,7 +939,6 @@
       `;
     }
 
-    // 신청 취소 처리 (DELETE)
     async function cancelApplication(applicationId, clubName) {
       hideAlert();
       if (!supabaseClient) return;
@@ -976,23 +963,20 @@
       await loadAllData();
     }
 
-    // 탭 3: 전체 현황 렌더링
     function renderStatusTab() {
       const filterSelect = document.getElementById("filterClub");
       const prevSelected = filterSelect.value || "all";
 
-      // 드롭다운 옵션 갱신
       filterSelect.innerHTML =
         '<option value="all">전체 동아리 보기</option>' +
         clubsData
-          .map((c) => `<option value="${c.id}">${escapeHtml(c.name)} (${getClubCount(c.id)}/${c.max_capacity}명)</option>`)
+          .map((c) => `<option value="${c.id}">${escapeHtml(c.name)} (${getClubCount(c.id)}/${getClubCapacity(c)}명)</option>`)
           .join("");
       filterSelect.value = prevSelected;
 
-      // 요약 칩 렌더링
       const chipsEl = document.getElementById("summaryChips");
       chipsEl.innerHTML = clubsData
-        .map((c) => `<span class="chip">${escapeHtml(c.name)}: ${getClubCount(c.id)} / ${c.max_capacity}명</span>`)
+        .map((c) => `<span class="chip">${escapeHtml(c.name)}: ${getClubCount(c.id)} / ${getClubCapacity(c)}명</span>`)
         .join("");
 
       renderStatusTable();
@@ -1014,12 +998,11 @@
         return;
       }
 
-      // 학년 -> 반 -> 번호 순 정렬
       const sorted = [...filtered].sort((a, b) => {
-        if (a.club_id !== b.club_id) return a.club_id - b.club_id;
-        if (a.grade !== b.grade) return a.grade - b.grade;
-        if (a.class_num !== b.class_num) return a.class_num - b.class_num;
-        return a.student_num - b.student_num;
+        if (a.club_id !== b.club_id) return Number(a.club_id) - Number(b.club_id);
+        if (a.grade !== b.grade) return Number(a.grade) - Number(b.grade);
+        if (a.class_num !== b.class_num) return Number(a.class_num) - Number(b.class_num);
+        return Number(a.student_num) - Number(b.student_num);
       });
 
       tbody.innerHTML = sorted
@@ -1032,14 +1015,13 @@
               <td>${app.class_num}반</td>
               <td>${app.student_num}번</td>
               <td>${escapeHtml(app.student_name)}</td>
-              <td>${formatDateTime(app.applied_at)}</td>
+              <td>${formatDateTime(getAppliedTime(app))}</td>
             </tr>
           `;
         })
         .join("");
     }
 
-    // CSV(엑셀) 파일 다운로드
     function downloadCsv() {
       const selectedClub = document.getElementById("filterClub").value;
       const filtered =
@@ -1057,16 +1039,15 @@
         const club = getClubById(app.club_id);
         return [
           club ? club.name : "",
-          club ? club.location : "",
+          getClubLocation(club),
           app.grade,
           app.class_num,
           app.student_num,
           app.student_name,
-          formatDateTime(app.applied_at)
+          formatDateTime(getAppliedTime(app))
         ].map((val) => `"${String(val).replace(/"/g, '""')}"`);
       });
 
-      // 엑셀 한글 깨짐 방지를 위해 UTF-8 BOM(\uFEFF) 추가
       const csvContent = "\uFEFF" + [header.join(","), ...rows.map((r) => r.join(","))].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -1080,7 +1061,6 @@
       URL.revokeObjectURL(url);
     }
 
-    // 이벤트 연결
     document.getElementById("btnRefresh").addEventListener("click", async () => {
       hideAlert();
       await loadAllData();
@@ -1091,10 +1071,11 @@
     document.getElementById("filterClub").addEventListener("change", renderStatusTable);
     document.getElementById("btnDownloadCsv").addEventListener("click", downloadCsv);
 
-    // 페이지 시작 시 초기화
     if (initSupabase()) {
       loadAllData();
     }
   </script>
 </body>
 </html>
+
+
